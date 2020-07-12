@@ -16,7 +16,6 @@ class HungarianMatcher(nn.Module):
     there are more predictions than targets. In this case, we do a 1-to-1 matching of the best predictions,
     while the others are un-matched (and thus treated as non-objects).
     """
-
     def __init__(self, cost_class: float = 1, cost_bbox: float = 1, cost_giou: float = 1, multiple_match: int = 1):
         """Creates the matcher
 
@@ -56,18 +55,14 @@ class HungarianMatcher(nn.Module):
         """
         bs, num_queries = outputs["pred_logits"].shape[:2]
 
-        # Duplicate targets to make multiple predictions to be assigned to each target
-        targets_dup = []
-        for i in range(self.multiple_match):
-            targets_dup.extend(targets)
-
         # We flatten to compute the cost matrices in a batch
         out_prob = outputs["pred_logits"].flatten(0, 1).softmax(-1)  # [batch_size * num_queries, num_classes]
         out_bbox = outputs["pred_boxes"].flatten(0, 1)  # [batch_size * num_queries, 4]
 
+        # Duplicate targets to make multiple predictions to be assigned to each target
         # Also concat the target labels and boxes
-        tgt_ids = torch.cat([v["labels"] for v in targets_dup])
-        tgt_bbox = torch.cat([v["boxes"] for v in targets_dup])
+        tgt_ids = torch.cat([torch.cat([v["labels"] for _ in range(self.multiple_match)]) for v in targets])
+        tgt_bbox = torch.cat([torch.cat([v["boxes"] for _ in range(self.multiple_match)]) for v in targets])
 
         # Compute the classification cost. Contrary to the loss, we don't use the NLL,
         # but approximate it in 1 - proba[target class].
@@ -82,9 +77,9 @@ class HungarianMatcher(nn.Module):
 
         # Final cost matrix
         C = self.cost_bbox * cost_bbox + self.cost_class * cost_class + self.cost_giou * cost_giou
-        C = C.view(bs * self.multiple_match, num_queries, -1).cpu()
+        C = C.view(bs, num_queries, -1).cpu()
 
-        sizes = [len(v["boxes"]) for v in targets_dup]
+        sizes = [len(v["boxes"]) for v in targets]
         indices = [linear_sum_assignment(c[i]) for i, c in enumerate(C.split(sizes, -1))]
         return [(torch.as_tensor(i, dtype=torch.int64), torch.as_tensor(j % bs, dtype=torch.int64)) for i, j in indices]
 
