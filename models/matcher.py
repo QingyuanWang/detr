@@ -83,7 +83,7 @@ class HungarianMatcher(nn.Module):
         sizes_ = []
         for i in range(self.multiple_match):
             sizes_.extend(sizes)
-        indices = [linear_sum_assignment(c[i]) for i, c in enumerate(C.split(sizes_, -1))]
+        indices = [linear_sum_assignment(c[i % bs]) for i, c in enumerate(C.split(sizes_, -1))]
         return [(torch.as_tensor(i, dtype=torch.int64), torch.as_tensor(j % bs, dtype=torch.int64)) for i, j in indices]
 
 
