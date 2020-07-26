@@ -14,7 +14,7 @@ class ConvBlock(nn.Module):
         self.conv = nn.Sequential(
             nn.Conv2d(num_channels, num_channels, kernel_size=3, stride=1, padding=1, groups=num_channels),
             nn.Conv2d(num_channels, num_channels, kernel_size=1, stride=1, padding=0),
-            nn.BatchNorm2d(num_features=num_channels, momentum=0.9997, eps=4e-5), nn.ReLU(inplace=True))
+            nn.BatchNorm2d(num_features=num_channels, momentum=0.9997, eps=4e-5), nn.ReLU())
 
     def forward(self, input):
         return self.conv(input)
@@ -47,22 +47,22 @@ class BiFPN(nn.Module):
 
         # Weight
         self.p6_w1 = nn.Parameter(torch.ones(2))
-        self.p6_w1_relu = nn.ReLU(inplace=True)
+        self.p6_w1_relu = nn.ReLU()
         self.p5_w1 = nn.Parameter(torch.ones(2))
-        self.p5_w1_relu = nn.ReLU(inplace=True)
+        self.p5_w1_relu = nn.ReLU()
         self.p4_w1 = nn.Parameter(torch.ones(2))
-        self.p4_w1_relu = nn.ReLU(inplace=True)
+        self.p4_w1_relu = nn.ReLU()
         self.p3_w1 = nn.Parameter(torch.ones(2))
-        self.p3_w1_relu = nn.ReLU(inplace=True)
+        self.p3_w1_relu = nn.ReLU()
 
         self.p4_w2 = nn.Parameter(torch.ones(3))
-        self.p4_w2_relu = nn.ReLU(inplace=True)
+        self.p4_w2_relu = nn.ReLU()
         self.p5_w2 = nn.Parameter(torch.ones(3))
-        self.p5_w2_relu = nn.ReLU(inplace=True)
+        self.p5_w2_relu = nn.ReLU()
         self.p6_w2 = nn.Parameter(torch.ones(3))
-        self.p6_w2_relu = nn.ReLU(inplace=True)
+        self.p6_w2_relu = nn.ReLU()
         self.p7_w2 = nn.Parameter(torch.ones(2))
-        self.p7_w2_relu = nn.ReLU(inplace=True)
+        self.p7_w2_relu = nn.ReLU()
 
     def forward(self, inputs):
         """
