@@ -190,7 +190,8 @@ class EfficientDetBackBone(nn.Module):
 
         p3_out, p4_out, p5_out, p6_out, p7_out = self.bifpn([p3, p4, p5, p6, p7])
 
-        weights = F.softmax(self.weights, dim=0)
+        # weights = F.softmax(self.weights, dim=0)
+        weights = self.weights / torch.sum(self.weights)
 
         features = weights[0] * self.p3_downsample(p3) + weights[1] * self.p4_downsample(
             p4) + weights[2] * p5 + weights[3] * self.p6_upsample(p6) + weights[4] * self.p7_upsample(p7)
