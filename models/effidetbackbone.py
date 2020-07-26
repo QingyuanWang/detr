@@ -155,11 +155,11 @@ class EfficientDetBackBone(nn.Module):
     def __init__(self):
         super(EfficientDetBackBone, self).__init__()
         self.compound_coef = 0
-        self.num_channels = 384
-        self.conv3 = nn.Conv2d(40, self.num_channels, kernel_size=1, stride=1, padding=0)
-        self.conv4 = nn.Conv2d(80, self.num_channels, kernel_size=1, stride=1, padding=0)
-        self.conv5 = nn.Conv2d(192, self.num_channels, kernel_size=1, stride=1, padding=0)
-        self.conv6 = nn.Conv2d(192, self.num_channels, kernel_size=3, stride=2, padding=1)
+        self.num_channels = 2048
+        self.conv3 = nn.Conv2d(64, self.num_channels, kernel_size=1, stride=1, padding=0)
+        self.conv4 = nn.Conv2d(128, self.num_channels, kernel_size=1, stride=1, padding=0)
+        self.conv5 = nn.Conv2d(304, self.num_channels, kernel_size=1, stride=1, padding=0)
+        self.conv6 = nn.Conv2d(304, self.num_channels, kernel_size=3, stride=2, padding=1)
         self.conv7 = nn.Sequential(nn.ReLU(),
                                    nn.Conv2d(self.num_channels, self.num_channels, kernel_size=3, stride=2, padding=1))
 
@@ -168,17 +168,17 @@ class EfficientDetBackBone(nn.Module):
         self.backbone_net = EfficientNet()
         self.weights = nn.Parameter(torch.ones(5))
 
-        self.p5_upsample = nn.Upsample(scale_factor=2, mode='nearest')
-        self.p6_upsample = nn.Upsample(scale_factor=4, mode='nearest')
-        self.p7_upsample = nn.Upsample(scale_factor=8, mode='nearest')
+        self.p6_upsample = nn.Upsample(scale_factor=2, mode='nearest')
+        self.p7_upsample = nn.Upsample(scale_factor=4, mode='nearest')
 
         self.p3_downsample = nn.MaxPool2d(kernel_size=2)
+        self.p4_downsample = nn.MaxPool2d(kernel_size=2)
 
         self.position_encoding = PositionEmbeddingSine(128, normalize=True)
         self.freeze_bn()
 
     def forward(self, inputs):
-        # P4 (64*64) is the target.
+        # P5 (32*32) is the target.
         img_batch = inputs.tensors
 
         c3, c4, c5 = self.backbone_net(img_batch)
@@ -190,15 +190,15 @@ class EfficientDetBackBone(nn.Module):
 
         p3_out, p4_out, p5_out, p6_out, p7_out = self.bifpn([p3, p4, p5, p6, p7])
 
-        weights = F.softmax(self.weights)
+        weights = F.softmax(self.weights, dim=0)
 
-        features = weights[0] * self.p3_downsample(p3) + weights[1] * p4 + weights[2] * self.p5_upsample(
-            p5) + weights[3] * self.p6_upsample(p6) + weights[4] * self.p7_upsample(p7)
+        features = weights[0] * self.p3_downsample(p3) + weights[1] * self.p4_downsample(
+            p4) + weights[2] * p5 + weights[3] * self.p6_upsample(p6) + weights[4] * self.p7_upsample(p7)
 
-        features = nested_tensor_from_tensor_list([features])
+        features = nested_tensor_from_tensor_list(features)
         pos = self.position_encoding(features).to(features.tensors.dtype)
 
-        return features, pos
+        return [features], [pos]
 
     def freeze_bn(self):
         for m in self.modules():
