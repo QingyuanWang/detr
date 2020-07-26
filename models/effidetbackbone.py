@@ -168,11 +168,12 @@ class EfficientDetBackBone(nn.Module):
         self.backbone_net = EfficientNet()
         self.weights = nn.Parameter(torch.ones(5))
 
-        self.p6_upsample = nn.Upsample(scale_factor=2, mode='nearest')
-        self.p7_upsample = nn.Upsample(scale_factor=4, mode='nearest')
+        self.p5_upsample = nn.Upsample(scale_factor=2, mode='nearest')
+        self.p6_upsample = nn.Upsample(scale_factor=4, mode='nearest')
+        self.p7_upsample = nn.Upsample(scale_factor=8, mode='nearest')
 
-        self.p3_downsample = nn.MaxPool2d(kernel_size=4)
-        self.p4_downsample = nn.MaxPool2d(kernel_size=2)
+        self.p3_downsample = nn.MaxPool2d(kernel_size=2)
+        # self.p4_downsample = nn.MaxPool2d(kernel_size=2)
 
         self.position_encoding = PositionEmbeddingSine(128, normalize=True)
         self.freeze_bn()
@@ -193,8 +194,8 @@ class EfficientDetBackBone(nn.Module):
         # weights = F.softmax(self.weights, dim=0)
         weights = self.weights / torch.sum(self.weights)
 
-        features = weights[0] * self.p3_downsample(p3) + weights[1] * self.p4_downsample(
-            p4) + weights[2] * p5 + weights[3] * self.p6_upsample(p6) + weights[4] * self.p7_upsample(p7)
+        features = weights[0] * self.p3_downsample(p3) + weights[1] * p4 + weights[2] * self.p5_upsample(
+            p5) + weights[3] * self.p6_upsample(p6) + weights[4] * self.p7_upsample(p7)
 
         features = nested_tensor_from_tensor_list(features)
         pos = self.position_encoding(features).to(features.tensors.dtype)
