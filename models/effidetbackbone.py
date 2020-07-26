@@ -1,9 +1,10 @@
 import torch.nn as nn
 import torch
 import math
-import nn.functional as F
+import torch.nn.functional as F
 from efficientnet_pytorch import EfficientNet as EffNet
 
+from util.misc import NestedTensor, nested_tensor_from_tensor_list
 from .position_encoding import PositionEmbeddingSine
 
 
@@ -152,6 +153,8 @@ class EfficientNet(nn.Module):
 
 class EfficientDetBackBone(nn.Module):
     def __init__(self):
+        super(EfficientDetBackBone, self).__init__()
+        self.compound_coef = 0
         self.num_channels = 384
         self.conv3 = nn.Conv2d(40, self.num_channels, kernel_size=1, stride=1, padding=0)
         self.conv4 = nn.Conv2d(80, self.num_channels, kernel_size=1, stride=1, padding=0)
@@ -192,7 +195,8 @@ class EfficientDetBackBone(nn.Module):
         features = weights[0] * self.p3_downsample(p3) + weights[1] * p4 + weights[2] * self.p5_upsample(
             p5) + weights[3] * self.p6_upsample(p6) + weights[4] * self.p7_upsample(p7)
 
-        pos = self.position_encoding(features).to(features.dtype)
+        features = nested_tensor_from_tensor_list([features])
+        pos = self.position_encoding(features).to(features.tensors.dtype)
 
         return features, pos
 
