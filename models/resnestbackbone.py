@@ -37,39 +37,26 @@ class ResnestBackBone(nn.Module):
     def __init__(self):
         super(ResnestBackBone, self).__init__()
         self.resnest = resnest_fpn_backbone(pretrained=True)
-        self.weights = nn.Parameter(torch.ones(5))
+        self.weights = nn.Parameter(torch.ones(4))
 
-        self.p5_upsample = nn.Upsample(scale_factor=2, mode='nearest')
-        self.p6_upsample = nn.Upsample(scale_factor=4, mode='nearest')
-        self.p7_upsample = nn.Upsample(scale_factor=8, mode='nearest')
-
-        self.p3_downsample = nn.MaxPool2d(kernel_size=2)
+        self.p2_downsample = nn.MaxPool2d(kernel_size=2)
+        self.p1_downsample = nn.MaxPool2d(kernel_size=4)
+        self.p0_downsample = nn.MaxPool2d(kernel_size=8)
         # self.p4_downsample = nn.MaxPool2d(kernel_size=2)
 
         self.position_encoding = PositionEmbeddingSine(128, normalize=True)
-        self.freeze_bn()
 
     def forward(self, inputs):
         # P5 (32*32) is the target.
         img_batch = inputs.tensors
 
         resnest_out = self.resnest(img_batch)
-        print(resnest_out)
-        # p3 = self.conv3(c3)
-        # p4 = self.conv4(c4)
-        # p5 = self.conv5(c5)
-        # p6 = self.conv6(c5)
-        # p7 = self.conv7(p6)
+        weights = self.weights / torch.sum(self.weights)
 
-        # p3_out, p4_out, p5_out, p6_out, p7_out = self.bifpn([p3, p4, p5, p6, p7])
+        features = weights[0] * self.p0_downsample(resnest_out['0']) + weights[1] * self.p1_downsample(
+            resnest_out['1']) + weights[2] * self.p2_downsample(resnest_out['2']) + weights[3] * resnest_out['3']
 
-        # # weights = F.softmax(self.weights, dim=0)
-        # weights = self.weights / torch.sum(self.weights)
+        features = nested_tensor_from_tensor_list(features)
+        pos = self.position_encoding(features).to(features.tensors.dtype)
 
-        # features = weights[0] * self.p3_downsample(p3) + weights[1] * p4 + weights[2] * self.p5_upsample(
-        #     p5) + weights[3] * self.p6_upsample(p6) + weights[4] * self.p7_upsample(p7)
-
-        # features = nested_tensor_from_tensor_list(features)
-        # pos = self.position_encoding(features).to(features.tensors.dtype)
-
-        # return [features], [pos]
+        return [features], [pos]
