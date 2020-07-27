@@ -45,16 +45,13 @@ class ResnestBackBone(nn.Module):
         # self.p4_downsample = nn.MaxPool2d(kernel_size=2)
 
         self.position_encoding = PositionEmbeddingSine(128, normalize=True)
+        self.freeze_bn()
 
     def forward(self, inputs):
         # P5 (32*32) is the target.
         img_batch = inputs.tensors
 
         resnest_out = self.resnest(img_batch)
-        # weights = self.weights / torch.sum(self.weights)
-
-        # features = weights[0] * self.p0_downsample(resnest_out['0']) + weights[1] * self.p1_downsample(
-        #     resnest_out['1']) + weights[2] * self.p2_downsample(resnest_out['2']) + weights[3] * resnest_out['3']
 
         features = torch.cat([
             self.p0_downsample(resnest_out['0']),
@@ -66,3 +63,8 @@ class ResnestBackBone(nn.Module):
         pos = self.position_encoding(features).to(features.tensors.dtype)
 
         return [features], [pos]
+
+    def freeze_bn(self):
+        for m in self.modules():
+            if isinstance(m, nn.BatchNorm2d) or isinstance(m, misc_nn_ops.FrozenBatchNorm2d):
+                m.eval()
