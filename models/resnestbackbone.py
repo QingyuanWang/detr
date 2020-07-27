@@ -37,7 +37,7 @@ class ResnestBackBone(nn.Module):
     def __init__(self):
         super(ResnestBackBone, self).__init__()
         self.resnest = resnest_fpn_backbone(pretrained=True)
-        self.weights = nn.Parameter(torch.ones(4))
+        # self.weights = nn.Parameter(torch.ones(4))
 
         self.p2_downsample = nn.MaxPool2d(kernel_size=2)
         self.p1_downsample = nn.MaxPool2d(kernel_size=4)
@@ -51,10 +51,16 @@ class ResnestBackBone(nn.Module):
         img_batch = inputs.tensors
 
         resnest_out = self.resnest(img_batch)
-        weights = self.weights / torch.sum(self.weights)
+        # weights = self.weights / torch.sum(self.weights)
 
-        features = weights[0] * self.p0_downsample(resnest_out['0']) + weights[1] * self.p1_downsample(
-            resnest_out['1']) + weights[2] * self.p2_downsample(resnest_out['2']) + weights[3] * resnest_out['3']
+        # features = weights[0] * self.p0_downsample(resnest_out['0']) + weights[1] * self.p1_downsample(
+        #     resnest_out['1']) + weights[2] * self.p2_downsample(resnest_out['2']) + weights[3] * resnest_out['3']
+
+        features = torch.cat([
+            self.p0_downsample(resnest_out['0']),
+            self.p1_downsample(resnest_out['1']),
+            self.p2_downsample(resnest_out['2']), resnest_out['3']
+        ], 1)
 
         features = nested_tensor_from_tensor_list(features)
         pos = self.position_encoding(features).to(features.tensors.dtype)
