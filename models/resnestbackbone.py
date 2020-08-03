@@ -31,11 +31,11 @@ def resnest_fpn_backbone(pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d, t
 class ResnestBackBone(nn.Module):
     def __init__(self):
         super(ResnestBackBone, self).__init__()
-        self.resnest = resnest_fpn_backbone(pretrained=False)
+        self.resnest = resnest_fpn_backbone(pretrained=True)
 
-        self.p0_downsample = nn.MaxPool2d(kernel_size=4)
-        self.p1_downsample = nn.MaxPool2d(kernel_size=2)
-        self.p3_upsample = nn.Upsample(scale_factor=2, mode='nearest')
+        self.p2_downsample = nn.MaxPool2d(kernel_size=2)
+        self.p1_downsample = nn.MaxPool2d(kernel_size=4)
+        self.p0_downsample = nn.MaxPool2d(kernel_size=8)
 
         self.position_encoding = PositionEmbeddingSine(128, normalize=True)
         self.freeze_bn()
@@ -48,8 +48,9 @@ class ResnestBackBone(nn.Module):
 
         features = torch.cat([
             self.p0_downsample(resnest_out['0']),
-            self.p1_downsample(resnest_out['1']), resnest_out['2'],
-            self.p3_upsample(resnest_out['3'])
+            self.p1_downsample(resnest_out['1']), 
+            self.p2_downsample(resnest_out['2']),
+            resnest_out['3']
         ], 1)
 
         features = nested_tensor_from_tensor_list(features)
